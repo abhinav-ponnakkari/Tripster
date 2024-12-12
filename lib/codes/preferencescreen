@@ -1,0 +1,269 @@
+import 'package:Tripster/recommendation_system/recommendation_screen%20.dart';
+import 'package:Tripster/utils/colors.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:Tripster/recommendation_system/user_preferences.dart';
+
+class PreferenceScreen extends StatefulWidget {
+  @override
+  _PreferenceScreenState createState() => _PreferenceScreenState();
+}
+
+class _PreferenceScreenState extends State<PreferenceScreen> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  Map<String, bool> _selectedTypes = {};
+  Map<String, bool> _selectedZones = {};
+  Map<String, bool> _selectedVisitTimes = {};
+  Map<String, bool> _selectedWeeklyOffs = {};
+
+  Future<List<QueryDocumentSnapshot>> fetchDestinationDetails() async {
+    final querySnapshot =
+        await _firestore.collection('destination_details').get();
+    return querySnapshot.docs;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final userPreferences = Provider.of<UserPreferences>(context);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'Set Preferences',
+          style: AppColors.titleTextStyle,
+        ),
+        centerTitle: true,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildTypeSelection(),
+            _buildZoneSelection(),
+            TextFormField(
+              decoration: InputDecoration(labelText: 'Max Budget (INR)'),
+              keyboardType: TextInputType.number,
+              onChanged: (value) => userPreferences
+                  .setMaxBudget(value.isNotEmpty ? int.parse(value) : null),
+            ),
+            _buildVisitTimeSelection(),
+            TextFormField(
+              decoration:
+                  InputDecoration(labelText: 'Max Distance from Airport (km)'),
+              keyboardType: TextInputType.number,
+              onChanged: (value) => userPreferences.setMaxDistanceFromAirport(
+                  value.isNotEmpty ? int.parse(value) : null),
+            ),
+            _buildWeeklyOffSelection(),
+            SizedBox(height: 16.0),
+            Center(
+              child: ElevatedButton(
+                onPressed: () async {
+                  final destinationDetails = await fetchDestinationDetails();
+                  final recommendations = filterRecommendations(
+                      destinationDetails, userPreferences);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => RecommendationScreen(
+                          recommendations: recommendations),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
+                  elevation: 4,
+                ),
+                child: Text(
+                  'Get Recommendations',
+                  style: TextStyle(
+                    fontFamily: 'Plus Jakarta Sans',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14.0,
+                    color: AppColors.White,
+                  ),
+                ),
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTypeSelection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Type',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildButton('Any Type', _selectedTypes,
+                  () => _toggleSelection(_selectedTypes, 'Any Type')),
+              _buildButton('War Memorial', _selectedTypes,
+                  () => _toggleSelection(_selectedTypes, 'War Memorial')),
+              _buildButton('Tomb', _selectedTypes,
+                  () => _toggleSelection(_selectedTypes, 'Tomb')),
+              _buildButton('Temple', _selectedTypes,
+                  () => _toggleSelection(_selectedTypes, 'Temple')),
+              _buildButton('Theme Park', _selectedTypes,
+                  () => _toggleSelection(_selectedTypes, 'Theme Park')),
+              // Add more types from the dataset
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _toggleSelection(Map<String, bool> selectionMap, String key) {
+    setState(() {
+      selectionMap[key] = !selectionMap.containsKey(key) || !selectionMap[key]!;
+    });
+  }
+
+  Widget _buildButton(
+      String text, Map<String, bool> selectionMap, VoidCallback onPressed) {
+    final isSelected = selectionMap.containsKey(text) && selectionMap[text]!;
+    return ElevatedButton(
+      onPressed: onPressed,
+      child: Text(text,
+          style: TextStyle(color: isSelected ? Colors.white : Colors.black)),
+      style: ElevatedButton.styleFrom(
+        primary: isSelected ? Colors.blue : Color.fromRGBO(220, 220, 220, 1),
+        onPrimary: isSelected ? Colors.white : Colors.black,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12.0),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildZoneSelection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Zone',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildButton('Any Zone', _selectedZones,
+                  () => _toggleSelection(_selectedZones, 'Any Zone')),
+              _buildButton('Northern', _selectedZones,
+                  () => _toggleSelection(_selectedZones, 'Northern')),
+              _buildButton('Western', _selectedZones,
+                  () => _toggleSelection(_selectedZones, 'Western')),
+              _buildButton('Southern', _selectedZones,
+                  () => _toggleSelection(_selectedZones, 'Southern')),
+              _buildButton('Eastern', _selectedZones,
+                  () => _toggleSelection(_selectedZones, 'Eastern')),
+              _buildButton('Central', _selectedZones,
+                  () => _toggleSelection(_selectedZones, 'Central')),
+              _buildButton('North Eastern', _selectedZones,
+                  () => _toggleSelection(_selectedZones, 'North Eastern')),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVisitTimeSelection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Visit Time',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildButton('Any Time', _selectedVisitTimes,
+                  () => _toggleSelection(_selectedVisitTimes, 'Any Time')),
+              _buildButton('Morning', _selectedVisitTimes,
+                  () => _toggleSelection(_selectedVisitTimes, 'Morning')),
+              _buildButton('Afternoon', _selectedVisitTimes,
+                  () => _toggleSelection(_selectedVisitTimes, 'Afternoon')),
+              _buildButton('Evening', _selectedVisitTimes,
+                  () => _toggleSelection(_selectedVisitTimes, 'Evening')),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWeeklyOffSelection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Weekly Off',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildButton('Any Day', _selectedWeeklyOffs,
+                  () => _toggleSelection(_selectedWeeklyOffs, 'Any Day')),
+              _buildButton('None', _selectedWeeklyOffs,
+                  () => _toggleSelection(_selectedWeeklyOffs, 'None')),
+              _buildButton('Monday', _selectedWeeklyOffs,
+                  () => _toggleSelection(_selectedWeeklyOffs, 'Monday')),
+              _buildButton('Tuesday', _selectedWeeklyOffs,
+                  () => _toggleSelection(_selectedWeeklyOffs, 'Tuesday')),
+              _buildButton('Wednesday', _selectedWeeklyOffs,
+                  () => _toggleSelection(_selectedWeeklyOffs, 'Wednesday')),
+              _buildButton('Thursday', _selectedWeeklyOffs,
+                  () => _toggleSelection(_selectedWeeklyOffs, 'Thursday')),
+              _buildButton('Friday', _selectedWeeklyOffs,
+                  () => _toggleSelection(_selectedWeeklyOffs, 'Friday')),
+              _buildButton('Saturday', _selectedWeeklyOffs,
+                  () => _toggleSelection(_selectedWeeklyOffs, 'Saturday')),
+              _buildButton('Sunday', _selectedWeeklyOffs,
+                  () => _toggleSelection(_selectedWeeklyOffs, 'Sunday')),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<Map<String, dynamic>> filterRecommendations(
+      List<QueryDocumentSnapshot> destinationDetails,
+      UserPreferences userPreferences) {
+    return destinationDetails
+        .where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          return (userPreferences.preferredType == null ||
+                  data['Type'] == userPreferences.preferredType) &&
+              (userPreferences.preferredZone == null ||
+                  data['Zone'] == userPreferences.preferredZone) &&
+              (userPreferences.maxBudget == null ||
+                  data['Entrance Fee in INR'] <= userPreferences.maxBudget) &&
+              (userPreferences.preferredVisitTime == null ||
+                  data['Best Time to visit'] ==
+                      userPreferences.preferredVisitTime) &&
+              (userPreferences.maxDistanceFromAirport == null ||
+                  (data['Airport with 50km Radius'] == 1 &&
+                      userPreferences.maxDistanceFromAirport! >= 50)) &&
+              (userPreferences.preferredWeeklyOff == null ||
+                  data['Weekly Off'] == userPreferences.preferredWeeklyOff);
+        })
+        .map((doc) => doc.data() as Map<String, dynamic>)
+        .toList();
+  }
+}
